@@ -130,6 +130,15 @@
             max-height: 200px;
             overflow-y: auto;
         }
+        .info-message {
+    background: #2196f3;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+}
     </style>
 </head>
 <body>
@@ -191,10 +200,6 @@
     // Global unhandled rejection handler
     window.addEventListener('unhandledrejection', function(event) {
         console.error('UNHANDLED REJECTION:', event.reason);
-        const debugDiv = document.getElementById('debugContainer');
-        if (debugDiv) {
-            debugDiv.innerHTML += `[UNHANDLED] ${JSON.stringify(event.reason)}\n`;
-        }
     });
 
     function debugLog(...args) {
@@ -247,11 +252,11 @@
 
     let currentAdController = null;
     let currentWidgetId = '9548';
-    let isLoading = false; // Prevent concurrent loads
+    let noAdsHandled = false; // flag to prevent double messages
 
     function showMessage(type, text) {
         const msgDiv = document.createElement('div');
-        msgDiv.className = type === 'success' ? 'success-message' : 'error-message';
+        msgDiv.className = type === 'success' ? 'success-message' : (type === 'info' ? 'info-message' : 'error-message');
         msgDiv.textContent = text;
         msgContainer.innerHTML = '';
         msgContainer.appendChild(msgDiv);
@@ -260,27 +265,11 @@
 
     function resetAdDisplay() {
         debugLog('Resetting ad display...');
-        
-        // Hide section
         adSection.classList.add('hidden');
-        
-        // Completely clear the container - remove all children
-        while (staticContainer.firstChild) {
-            staticContainer.removeChild(staticContainer.firstChild);
-        }
-        
-        // Hide fullscreen button
+        staticContainer.innerHTML = '';
         fullscreenBtn.classList.add('hidden');
-        
-        // Clear controller reference
         currentAdController = null;
-        
-        // Force garbage collection hint (not actual GC, but helps)
-        if (window.tads && window.tads.controllers) {
-            // If tads stores controllers by ID, we can try to clean them
-            debugLog('Tads controllers before cleanup:', Object.keys(window.tads.controllers || {}));
-        }
-        
+        noAdsHandled = false;
         debugLog('Display reset complete');
     }
 
@@ -296,7 +285,7 @@
         if (window.tads) {
             debugLog('tads.init exists:', typeof window.tads.init === 'function');
             debugLog('tads object keys:', Object.keys(window.tads));
-            debugLog('tads.controllers:', window.tads.controllers ? Object.keys(window.tads.controllers) : 'none');
+            debugLog('tads.controllers:', window.tads.controllers ? 'present' : 'none');
         }
         return window.tads && typeof window.tads.init === 'function';
     }
@@ -327,14 +316,6 @@
     }
 
     async function loadAd(widgetId, adType, rewardType, widgetName = '') {
-        // Prevent multiple simultaneous loads
-        if (isLoading) {
-            debugLog('Already loading, please wait...');
-            showMessage('error', 'Already loading, please wait...');
-            return;
-        }
-        
-        isLoading = true;
         clearDebug();
         debugLog('Starting ad load process...');
         debugLog('Widget ID:', widgetId);
@@ -347,45 +328,31 @@
             const normalizedId = normalizeWidgetId(widgetId);
             debugLog('Normalized widget ID:', normalizedId);
 
-            // COMPLETE RESET before anything else
             resetAdDisplay();
-            
-            // Small delay to ensure DOM is clean
-            await new Promise(r => setTimeout(r, 50));
-            
             currentWidgetId = normalizedId;
             setActiveWidget(normalizedId);
 
-            // Create container BEFORE init
+            // --- Create container BEFORE init() for static ads ---
             if (adType === 'static') {
                 const containerId = `tads-container-${normalizedId}`;
                 debugLog('Creating container with ID:', containerId);
-                
-                // Create fresh container
-                const containerDiv = document.createElement('div');
-                containerDiv.id = containerId;
-                containerDiv.style.minHeight = '100px';
-                containerDiv.style.border = '1px dashed #ccc';
-                containerDiv.style.padding = '10px';
-                containerDiv.style.margin = '10px 0';
-                
-                // Append to static container
-                staticContainer.appendChild(containerDiv);
+                staticContainer.innerHTML = `<div id="${containerId}" style="min-height:100px;"></div>`;
 
-                // Verify container exists
                 const container = document.getElementById(containerId);
                 debugLog('Container found:', !!container);
+                debugLog('Container parent:', container?.parentElement?.id || 'unknown');
                 if (!container) {
                     throw new Error('Failed to create container element');
                 }
-                
-                debugLog('Container parent:', container.parentElement?.id);
             }
 
-            // Define callbacks
+            // --- Set up callbacks ---
             const onAdsNotFound = () => {
                 debugLog('Callback: No ads found');
-                showMessage('error', 'No ads available for this Widget ID');
+                noAdsHandled = true;
+                showMessage('info', 'ℹ️ No ads available for this Widget ID right now.');
+                // Optionally hide ad section if it was shown
+                adSection.classList.add('hidden');
             };
 
             let onClickReward = null;
@@ -405,12 +372,12 @@
                 }
             }
 
-            // Initialize tads
+            // --- Initialize tads ---
             debugLog('Initializing tads with widget ID:', normalizedId);
             currentAdController = window.tads.init({
                 widgetId: normalizedId,
                 type: adType,
-                debug:false,
+                debug: true, // keep true for testing; set false in production
                 onClickReward: onClickReward,
                 onShowReward: onShowReward,
                 onAdsNotFound: onAdsNotFound
@@ -423,8 +390,8 @@
                 await currentAdController.loadAd();
                 debugLog('loadAd() completed');
 
-                // Small delay to ensure ad is ready
-                await new Promise(r => setTimeout(r, 200));
+                // Small delay
+                await new Promise(r => setTimeout(r, 100));
 
                 debugLog('Calling showAd()...');
                 await currentAdController.showAd();
@@ -437,48 +404,47 @@
                 fullscreenBtn.classList.remove('hidden');
                 adSection.classList.remove('hidden');
 
-                // Remove all old listeners by cloning
                 const newBtn = fullscreenBtn.cloneNode(true);
                 fullscreenBtn.parentNode.replaceChild(newBtn, fullscreenBtn);
-                
-                // Get fresh reference
                 const updatedBtn = document.getElementById('fullscreenTrigger');
-                
-                // Add new listener
                 updatedBtn.addEventListener('click', async () => {
                     if (currentAdController) {
                         try {
-                            debugLog('Fullscreen: showing ad...');
                             await currentAdController.showAd();
-                            debugLog('Fullscreen: ad shown');
                         } catch (err) {
                             debugLog('Fullscreen showAd error:', err);
-                            onAdsNotFound();
+                            if (!noAdsHandled) onAdsNotFound();
                         }
-                    } else {
-                        debugLog('Fullscreen: no controller');
                     }
                 });
-                
                 showMessage('success', `✅ Fullscreen ready for #${normalizedId}`);
             }
 
         } catch (error) {
             debugLog('>>> ERROR IN loadAd:');
-            if (error instanceof Error) {
-                debugLog('message:', error.message);
-                debugLog('stack:', error.stack);
+            const errorMsg = error?.message || (typeof error === 'string' ? error : 'Unknown error');
+            
+            // If we already handled "no ads" via callback, don't show another error
+            if (noAdsHandled) {
+                debugLog('No ads case already handled, suppressing error message.');
+                // Ensure ad section is hidden
+                adSection.classList.add('hidden');
             } else {
-                debugLog('Caught non-Error:', error);
-                debugLog('Type:', typeof error);
-                try {
-                    debugLog('Stringified:', JSON.stringify(error));
-                } catch (e) {}
+                // Real error
+                if (error instanceof Error) {
+                    debugLog('message:', error.message);
+                    debugLog('stack:', error.stack);
+                } else {
+                    debugLog('Caught non-Error:', error);
+                    debugLog('Type:', typeof error);
+                    try {
+                        debugLog('Stringified:', JSON.stringify(error));
+                    } catch (e) {}
+                }
+                showMessage('error', `Failed: ${errorMsg}`);
+                resetAdDisplay();
             }
-            showMessage('error', `Failed: ${error?.message || 'Unknown error'}`);
-            resetAdDisplay();
         } finally {
-            isLoading = false;
             debugLog('Load process finished');
         }
     }
@@ -490,7 +456,7 @@
             const widgetName = btn.dataset.name;
             widgetIdInput.value = widgetId;
             nameInput.value = widgetName || '';
-            adTypeSelect.value = 'static'; // Your widgets are TGB
+            adTypeSelect.value = 'static';
             setActiveWidget(widgetId);
             showMessage('success', `Selected #${widgetId} (${widgetName})`);
         });
@@ -519,25 +485,28 @@
         submitBtn.textContent = '🚀 Load Ad';
     });
 
-    // Set default active widget
     setActiveWidget('9548');
-    
     window.addEventListener('load', () => {
         debugLog('Page loaded');
         checkTads();
     });
-
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-        if (currentAdController) {
-            // Attempt to clean up if tads provides a method
-            debugLog('Cleaning up on unload');
-        }
-    });
 })();
 </script>
-   </body>
+    
+       
+    
+   
+            
+
+           
+
+          
+              
+          
+
+</body> 
 </html>
+
 
 
 
