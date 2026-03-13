@@ -189,7 +189,7 @@
 
    <script>
 (function() {
-    // --- Global unhandled rejection handler ---
+    // Global unhandled rejection handler
     window.addEventListener('unhandledrejection', function(event) {
         console.error('UNHANDLED REJECTION:', event.reason);
         const debugDiv = document.getElementById('debugContainer');
@@ -198,14 +198,12 @@
         }
     });
 
-    // Debug logging
     function debugLog(...args) {
         console.log('[DEBUG]', ...args);
         const debugDiv = document.getElementById('debugContainer');
         if (debugDiv) {
             debugDiv.classList.remove('hidden');
             const timestamp = new Date().toLocaleTimeString();
-            // Convert args to strings safely
             const strings = args.map(arg => {
                 try {
                     if (arg === null) return 'null';
@@ -226,7 +224,6 @@
         if (debugDiv) debugDiv.innerHTML = '';
     }
 
-    // Telegram WebApp
     const tg = window.Telegram?.WebApp;
     if (tg) {
         tg.expand();
@@ -326,6 +323,24 @@
             currentWidgetId = normalizedId;
             setActiveWidget(normalizedId);
 
+            // --- Create container BEFORE init() ---
+            if (adType === 'static') {
+                const containerId = `tads-container-${normalizedId}`;
+                debugLog('Creating container with ID:', containerId);
+                staticContainer.innerHTML = `<div id="${containerId}" style="min-height:100px; border:1px dashed #ccc;"></div>`;
+
+                // Double-check container exists
+                const container = document.getElementById(containerId);
+                debugLog('Container found:', !!container);
+                if (!container) {
+                    throw new Error('Failed to create container element');
+                }
+            } else {
+                // For fullscreen, no container needed, but we still need to show button later
+                // (container not required for fullscreen)
+            }
+
+            // --- Now initialize tads ---
             const onAdsNotFound = () => {
                 debugLog('Callback: No ads found');
                 showMessage('error', 'No ads available for this Widget ID');
@@ -361,40 +376,21 @@
             debugLog('Ad controller created:', !!currentAdController);
 
             if (adType === 'static') {
-                const containerId = `tads-container-${normalizedId}`;
-                debugLog('Creating container with ID:', containerId);
-
-                staticContainer.innerHTML = `<div id="${containerId}" style="min-height:100px; border:1px dashed #ccc;"></div>`;
-
-                const container = document.getElementById(containerId);
-                debugLog('Container found:', !!container);
-
                 debugLog('Calling loadAd()...');
                 await currentAdController.loadAd();
                 debugLog('loadAd() completed');
 
-                // Small delay to ensure DOM is ready
+                // Small delay
                 await new Promise(r => setTimeout(r, 100));
 
                 debugLog('Calling showAd()...');
-                // Use .catch() directly to capture the error before re-throwing
-                const showPromise = currentAdController.showAd();
-                showPromise.catch(err => {
-                    debugLog('>>> showAd() CATCHED INSIDE .catch():');
-                    debugLog('Error value:', err);
-                    debugLog('Type:', typeof err);
-                    if (err instanceof Error) {
-                        debugLog('Message:', err.message);
-                        debugLog('Stack:', err.stack);
-                    }
-                });
-                await showPromise; // this will re-throw the same error, caught by outer catch
+                await currentAdController.showAd();
                 debugLog('showAd() completed successfully');
 
                 adSection.classList.remove('hidden');
                 showMessage('success', `✅ Ad loaded for #${normalizedId}`);
             } else {
-                // Fullscreen logic
+                // Fullscreen: prepare button
                 fullscreenBtn.classList.remove('hidden');
                 adSection.classList.remove('hidden');
 
@@ -422,12 +418,9 @@
             } else {
                 debugLog('Caught non-Error:', error);
                 debugLog('Type:', typeof error);
-                // Attempt to stringify
                 try {
                     debugLog('Stringified:', JSON.stringify(error));
-                } catch (e) {
-                    debugLog('Stringification failed');
-                }
+                } catch (e) {}
             }
             showMessage('error', `Failed: ${error?.message || 'Unknown error'}`);
             resetAdDisplay();
@@ -479,5 +472,6 @@
 </script>
 </body>
 </html>
+
 
 
