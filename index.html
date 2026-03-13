@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>tads Publisher TMA Tester</title>
-    <!-- Telegram Mini App initialization (MUST be in head) -->
+    <!-- Telegram Mini App initialization -->
     <script src="https://telegram.org/js/telegram-web-app.js?61"></script>
-    <!-- tads widget script (loaded asynchronously) -->
-    <script src="https://w.tads.me/widget.js" async></script>
+    <!-- tads widget script -->
+    <script src="https://w.tads.me/widget.js"></script>
+    <!-- NO async attribute to ensure it loads before we use it -->
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -16,15 +17,8 @@
             background: var(--tg-theme-bg-color, #ffffff);
             color: var(--tg-theme-text-color, #000000);
         }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-        .subtitle {
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #999999);
-            margin-bottom: 24px;
-        }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        .subtitle { font-size: 14px; color: var(--tg-theme-hint-color, #999999); margin-bottom: 24px; }
         .info-box {
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
             border-left: 4px solid var(--tg-theme-button-color, #40a7e3);
@@ -52,17 +46,11 @@
             transition: all 0.2s;
             text-align: center;
         }
-        .widget-btn:hover {
+        .widget-btn:hover, .widget-btn.active {
             background: var(--tg-theme-button-color, #40a7e3);
             color: var(--tg-theme-button-text-color, #ffffff);
         }
-        .widget-btn.active {
-            background: var(--tg-theme-button-color, #40a7e3);
-            color: var(--tg-theme-button-text-color, #ffffff);
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 20px; }
         label {
             display: block;
             margin-bottom: 6px;
@@ -80,10 +68,7 @@
             box-sizing: border-box;
             font-size: 16px;
         }
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
+        textarea { resize: vertical; min-height: 80px; }
         button {
             width: 100%;
             padding: 14px 24px;
@@ -97,9 +82,7 @@
             transition: opacity 0.2s;
             margin-top: 8px;
         }
-        button:active {
-            opacity: 0.8;
-        }
+        button:active { opacity: 0.8; }
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -112,13 +95,11 @@
         #staticAdContainer {
             min-height: 100px;
             margin: 16px 0;
+            border: 1px dashed var(--tg-theme-hint-color, #ccc);
+            padding: 10px;
         }
-        #fullscreenTrigger {
-            margin-top: 16px;
-        }
-        .hidden {
-            display: none;
-        }
+        #fullscreenTrigger { margin-top: 16px; }
+        .hidden { display: none; }
         .success-message {
             background: #4caf50;
             color: white;
@@ -137,40 +118,36 @@
             text-align: center;
             font-weight: 500;
         }
-        .widget-badge {
-            display: inline-block;
-            background: var(--tg-theme-button-color, #40a7e3);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            padding: 4px 8px;
-            border-radius: 4px;
+        .debug-box {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
             font-size: 12px;
-            margin-left: 8px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
 <body>
     <h1>🧪 Test Your tads Widget</h1>
-    <div class="subtitle">Your widgets from dashboard: <span class="widget-badge">#9548 (Abr)</span> <span class="widget-badge">#9549 (ar)</span></div>
+    <div class="subtitle">Widgets from dashboard: #9548 (Abr) | #9549 (ar)</div>
 
-    <!-- Info box explaining where to get Widget ID -->
-    <div class="info-box">
-        <strong>📌 Your Widget IDs from dashboard:</strong><br>
-        • <strong>#9548</strong> — Name: "Abr" (TGB format)<br>
-        • <strong>#9549</strong> — Name: "ar" (TGB format)<br>
-        Click the buttons below to quickly select a widget.
-    </div>
+    <!-- Debug info will appear here -->
+    <div id="debugContainer" class="debug-box hidden"></div>
 
-    <!-- Quick select buttons for your widgets -->
     <div class="quick-select">
-        <div class="widget-btn" data-widget="9548" data-name="Abr" data-format="static">📋 #9548 (Abr)</div>
-        <div class="widget-btn" data-widget="9549" data-name="ar" data-format="static">📋 #9549 (ar)</div>
+        <div class="widget-btn" data-widget="9548" data-name="Abr">📋 #9548 (Abr)</div>
+        <div class="widget-btn" data-widget="9549" data-name="ar">📋 #9549 (ar)</div>
     </div>
 
-    <!-- Form for publisher input -->
     <form id="adForm">
         <div class="form-group">
             <label for="widgetId">Widget ID *</label>
-            <input type="text" id="widgetId" name="widgetId" required placeholder="e.g., 9548" value="9548">
+            <input type="text" id="widgetId" name="widgetId" required value="9548">
         </div>
 
         <div class="form-group">
@@ -184,50 +161,57 @@
         <div class="form-group">
             <label for="rewardType">Reward Type</label>
             <select id="rewardType" name="rewardType">
-                <option value="rewarded">🎁 Rewarded (user gets reward)</option>
-                <option value="non-rewarded">🔹 Non-rewarded (no reward)</option>
+                <option value="rewarded">🎁 Rewarded</option>
+                <option value="non-rewarded">🔹 Non-rewarded</option>
             </select>
-            <small style="display: block; margin-top: 4px; color: var(--tg-theme-hint-color);">
-                For rewarded: TGB → reward on click; Fullscreen → reward on view.
-            </small>
         </div>
 
         <div class="form-group">
-            <label for="name">Name (optional)</label>
-            <input type="text" id="name" name="name" placeholder="e.g., Abr Campaign" value="Abr">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="Abr">
         </div>
 
         <div class="form-group">
-            <label for="description">Description (optional)</label>
-            <textarea id="description" name="description" placeholder="Notes about this widget">Test widget from dashboard</textarea>
+            <label for="description">Description</label>
+            <textarea id="description" name="description">Test widget from dashboard</textarea>
         </div>
 
-        <button type="submit" id="submitBtn">🚀 Load & Preview Ad</button>
+        <button type="submit" id="submitBtn">🚀 Load Ad</button>
     </form>
 
-    <!-- Area where ad will be displayed -->
     <div id="adSection" class="hidden">
-        <h2 style="font-size: 18px; margin-bottom: 12px;">Ad Preview <span id="activeWidgetBadge" class="widget-badge"></span></h2>
-        <!-- Static ad container (ID will be generated dynamically) -->
+        <h2>Ad Preview <span id="activeWidgetBadge" style="background:var(--tg-theme-button-color); color:white; padding:2px 8px; border-radius:4px;">#9548</span></h2>
         <div id="staticAdContainer"></div>
-        <!-- Fullscreen trigger button -->
         <button id="fullscreenTrigger" class="hidden">Show Fullscreen Ad</button>
     </div>
 
-    <!-- Temporary message container -->
     <div id="messageContainer"></div>
 
     <script>
         (function() {
-            // --- Telegram WebApp initialization ---
+            // Debug logging
+            function debugLog(...args) {
+                console.log('[DEBUG]', ...args);
+                const debugDiv = document.getElementById('debugContainer');
+                debugDiv.classList.remove('hidden');
+                const timestamp = new Date().toLocaleTimeString();
+                debugDiv.innerHTML += `[${timestamp}] ${args.join(' ')}\n`;
+                debugDiv.scrollTop = debugDiv.scrollHeight;
+            }
+
+            // Clear debug log
+            function clearDebug() {
+                document.getElementById('debugContainer').innerHTML = '';
+            }
+
+            // Telegram WebApp
             const tg = window.Telegram?.WebApp;
-            if (!tg) {
-                console.error('Telegram WebApp script not loaded.');
-                showMessage('error', 'Telegram Mini App failed to initialize. Please reopen from Telegram.');
-            } else {
+            if (tg) {
                 tg.expand();
-                tg.setHeaderColor('secondary_bg_color');
-                tg.ready(); // Notify Telegram that app is ready
+                tg.ready();
+                debugLog('Telegram WebApp initialized');
+            } else {
+                debugLog('WARNING: Telegram WebApp not available');
             }
 
             // DOM elements
@@ -243,28 +227,21 @@
             const fullscreenBtn = document.getElementById('fullscreenTrigger');
             const msgContainer = document.getElementById('messageContainer');
             const activeWidgetBadge = document.getElementById('activeWidgetBadge');
-            
-            // Quick select buttons
             const widgetBtns = document.querySelectorAll('.widget-btn');
 
             // State
             let currentAdController = null;
-            let tadsReady = false;
-            let currentWidgetId = '9548'; // Default to first widget
+            let currentWidgetId = '9548';
 
-            // Helper to show temporary messages
             function showMessage(type, text) {
                 const msgDiv = document.createElement('div');
                 msgDiv.className = type === 'success' ? 'success-message' : 'error-message';
                 msgDiv.textContent = text;
-                msgContainer.innerHTML = ''; // clear previous
+                msgContainer.innerHTML = '';
                 msgContainer.appendChild(msgDiv);
-                setTimeout(() => {
-                    msgDiv.remove();
-                }, 4000);
+                setTimeout(() => msgDiv.remove(), 4000);
             }
 
-            // Reset ad display area
             function resetAdDisplay() {
                 adSection.classList.add('hidden');
                 staticContainer.innerHTML = '';
@@ -272,148 +249,167 @@
                 currentAdController = null;
             }
 
-            // Update active button state
             function setActiveWidget(widgetId) {
                 widgetBtns.forEach(btn => {
-                    if (btn.dataset.widget === widgetId) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
+                    btn.classList.toggle('active', btn.dataset.widget === widgetId);
                 });
                 activeWidgetBadge.textContent = `#${widgetId}`;
             }
 
-            // Wait for tads script to be ready
-            function waitForTads(timeout = 5000) {
+            // Check if tads is available
+            function checkTads() {
+                debugLog('Checking tads availability...');
+                debugLog('window.tads exists:', !!window.tads);
+                if (window.tads) {
+                    debugLog('tads.init exists:', typeof window.tads.init === 'function');
+                    debugLog('tads object keys:', Object.keys(window.tads));
+                }
+                return window.tads && typeof window.tads.init === 'function';
+            }
+
+            // Wait for tads with better detection
+            function waitForTads(timeout = 10000) {
                 return new Promise((resolve, reject) => {
-                    if (window.tads && typeof window.tads.init === 'function') {
+                    if (checkTads()) {
+                        debugLog('tads already available');
                         return resolve();
                     }
+
+                    debugLog('Waiting for tads to load...');
                     const start = Date.now();
                     const interval = setInterval(() => {
-                        if (window.tads && typeof window.tads.init === 'function') {
+                        if (checkTads()) {
                             clearInterval(interval);
+                            debugLog('tads loaded successfully');
                             resolve();
                         } else if (Date.now() - start > timeout) {
                             clearInterval(interval);
-                            reject(new Error('tads.me widget script failed to load.'));
+                            reject(new Error('tads widget script failed to load'));
                         }
-                    }, 50);
+                    }, 100);
                 });
             }
 
-            // Main function to load and display ad
+            // Try different ID formats
+            function tryWidgetIdFormats(baseId) {
+                // Try both formats that tads might expect
+                return [
+                    baseId,                          // 9548
+                    baseId.toString(),               // "9548"
+                    `#${baseId}`,                    // #9548
+                    baseId.replace('#', '')          // remove # if present
+                ];
+            }
+
             async function loadAd(widgetId, adType, rewardType, widgetName = '') {
+                clearDebug();
+                debugLog('Starting ad load process...');
+                debugLog('Widget ID:', widgetId);
+                debugLog('Ad Type:', adType);
+                debugLog('Reward Type:', rewardType);
+
                 try {
-                    if (!tadsReady) {
-                        await waitForTads();
-                        tadsReady = true;
+                    // Wait for tads
+                    await waitForTads();
+                    
+                    // Double check tads is ready
+                    if (!window.tads || typeof window.tads.init !== 'function') {
+                        throw new Error('tads.init is not a function');
                     }
 
                     resetAdDisplay();
                     currentWidgetId = widgetId;
                     setActiveWidget(widgetId);
 
-                    // Common callbacks
+                    // Try different ID formats
+                    const idFormats = tryWidgetIdFormats(widgetId);
+                    debugLog('Trying ID formats:', idFormats);
+
+                    // Callbacks
                     const onAdsNotFound = () => {
-                        console.log('No ads found for widget:', widgetId);
-                        showMessage('error', 'No ads available for this Widget ID.');
+                        debugLog('Callback: No ads found');
+                        showMessage('error', 'No ads available for this Widget ID');
                     };
 
-                    // Prepare callbacks based on reward type
                     let onClickReward = null;
                     let onShowReward = null;
 
                     if (rewardType === 'rewarded') {
                         if (adType === 'static') {
                             onClickReward = (adId) => {
-                                console.log('Rewarded click! Ad ID:', adId);
-                                if (tg) tg.HapticFeedback?.impactOccurred('medium');
-                                showMessage('success', `🎉 Reward earned for clicking widget #${widgetId}! (simulated)`);
+                                debugLog('Callback: Click reward - Ad ID:', adId);
+                                showMessage('success', `🎉 Click reward for #${widgetId}`);
                             };
-                        } else if (adType === 'fullscreen') {
+                        } else {
                             onShowReward = (result) => {
-                                console.log('Rewarded view! Result:', result);
-                                if (tg) tg.HapticFeedback?.notificationOccurred('success');
-                                showMessage('success', `🎁 Reward earned for watching widget #${widgetId}! (simulated)`);
+                                debugLog('Callback: Show reward - Result:', result);
+                                showMessage('success', `🎁 View reward for #${widgetId}`);
                             };
                         }
                     }
 
-                    // Initialize widget
+                    // Try initializing with first format
+                    debugLog('Initializing tads with widget ID:', idFormats[0]);
+                    
                     currentAdController = window.tads.init({
-                        widgetId: widgetId,
+                        widgetId: idFormats[0],
                         type: adType,
-                        debug: false, // Set to false in production to count real impressions
+                        debug: true,
                         onClickReward: onClickReward,
                         onShowReward: onShowReward,
                         onAdsNotFound: onAdsNotFound
                     });
 
-                    if (adType === 'static') {
-                        // Create container with required ID
-                        const containerId = `tads-container-${widgetId}`;
-                        staticContainer.innerHTML = `<div id="${containerId}"></div>`;
-                        await currentAdController.loadAd();
-                        await currentAdController.showAd();
-                        adSection.classList.remove('hidden');
-                    } else { // fullscreen
-                        // Show trigger button
-                        fullscreenBtn.classList.remove('hidden');
-                        adSection.classList.remove('hidden');
+                    debugLog('Ad controller created:', !!currentAdController);
 
-                        // Clone button to remove old listeners
-                        const newBtn = fullscreenBtn.cloneNode(true);
-                        fullscreenBtn.parentNode.replaceChild(newBtn, fullscreenBtn);
+                    if (adType === 'static') {
+                        // Create container
+                        const containerId = `tads-container-${idFormats[0]}`;
+                        debugLog('Creating container with ID:', containerId);
                         
-                        // Update reference
-                        const updatedBtn = document.getElementById('fullscreenTrigger');
-                        updatedBtn.addEventListener('click', async () => {
-                            if (currentAdController) {
-                                try {
-                                    await currentAdController.showAd();
-                                } catch (err) {
-                                    console.error('Fullscreen ad error:', err);
-                                    onAdsNotFound();
-                                }
-                            }
-                        });
+                        staticContainer.innerHTML = `<div id="${containerId}" style="min-height:100px;"></div>`;
+                        
+                        // Verify container exists
+                        const container = document.getElementById(containerId);
+                        debugLog('Container found:', !!container);
+
+                        // Load ad
+                        debugLog('Calling loadAd()...');
+                        await currentAdController.loadAd();
+                        debugLog('loadAd() completed');
+
+                        // Show ad
+                        debugLog('Calling showAd()...');
+                        await currentAdController.showAd();
+                        debugLog('showAd() completed');
+
+                        adSection.classList.remove('hidden');
+                        showMessage('success', `✅ Ad loaded for #${widgetId}`);
                     }
 
-                    // Success message for preview loaded
-                    showMessage('success', `✅ Ad preview loaded for widget #${widgetId}${widgetName ? ' (' + widgetName + ')' : ''}`);
-
                 } catch (error) {
-                    console.error('Error loading ad:', error);
-                    showMessage('error', 'Failed to load ad. Check console for details.');
+            debugLog('ERROR:', error.message);
+                    debugLog('Error stack:', error.stack);
+                    showMessage('error', `Failed: ${error.message}`);
                     resetAdDisplay();
                 }
             }
 
-            // Quick select button handlers
+            // Quick select buttons
             widgetBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const widgetId = btn.dataset.widget;
                     const widgetName = btn.dataset.name;
-                    const format = btn.dataset.format;
                     
                     widgetIdInput.value = widgetId;
                     nameInput.value = widgetName || '';
-                    
-                    // Set format if specified
-                    if (format === 'static') {
-                        adTypeSelect.value = 'static';
-                    } else if (format === 'fullscreen') {
-                        adTypeSelect.value = 'fullscreen';
-                    }
-                    
+                    adTypeSelect.value = 'static'; // Both your widgets are TGB
                     setActiveWidget(widgetId);
-                    showMessage('success', `Selected widget #${widgetId} (${widgetName || 'unknown'})`);
+                    showMessage('success', `Selected #${widgetId} (${widgetName})`);
                 });
             });
 
-            // Form submit handler
+            // Form submit
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -424,56 +420,43 @@
                 const desc = descInput.value.trim();
 
                 if (!widgetId) {
-                    showMessage('error', 'Please enter a Widget ID.');
+                    showMessage('error', 'Enter a Widget ID');
                     return;
                 }
 
-                // Disable button to prevent double submission
                 submitBtn.disabled = true;
                 submitBtn.textContent = '⏳ Loading...';
 
-                // Optional: send submission to your backend
-                if (name || desc) {
-                    try {
-                        await fetch('https://your-backend.com/api/submissions', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                widgetId,
-                                adType,
-                                rewardType,
-                                name,
-                                description: desc,
-                                user: tg?.initDataUnsafe?.user || null
-                            })
-                        }).catch(err => console.warn('Backend not reachable (optional)'));
-                    } catch (err) {
-                        // Non-blocking
-                    }
-                }
-
-                // Load the ad
                 await loadAd(widgetId, adType, rewardType, name);
 
-                // Re-enable button
                 submitBtn.disabled = false;
-                submitBtn.textContent = '🚀 Load & Preview Ad';
+                submitBtn.textContent = '🚀 Load Ad';
             });
 
-            // Set default active widget
+            // Set default
             setActiveWidget('9548');
             
-            // Auto-load first widget on page load (optional - comment out if you don't want auto-load)
+            // Check tads availability on load
             window.addEventListener('load', () => {
-                // Uncomment the next line if you want to auto-load the first widget on startup
-                // setTimeout(() => loadAd('9548', 'static', 'rewarded', 'Abr'), 500);
+                debugLog('Page loaded');
+                checkTads();
             });
 
         })();
     </script>
 </body>
 </html>
+
         
+        
+
+       
+    
+
+           
+               
+                       
+            
         
            
         
@@ -487,4 +470,5 @@
                   
 
            
+
 
