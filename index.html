@@ -187,263 +187,297 @@
 
     <div id="messageContainer"></div>
 
-    <script>
-        (function() {
-            // Debug logging
-            function debugLog(...args) {
-                console.log('[DEBUG]', ...args);
-                const debugDiv = document.getElementById('debugContainer');
-                debugDiv.classList.remove('hidden');
-                const timestamp = new Date().toLocaleTimeString();
-                debugDiv.innerHTML += `[${timestamp}] ${args.join(' ')}\n`;
-                debugDiv.scrollTop = debugDiv.scrollHeight;
-            }
+   <script>
+(function() {
+    // --- Global unhandled rejection handler ---
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('UNHANDLED REJECTION:', event.reason);
+        const debugDiv = document.getElementById('debugContainer');
+        if (debugDiv) {
+            debugDiv.innerHTML += `[UNHANDLED] ${JSON.stringify(event.reason)}\n`;
+        }
+    });
 
-            // Clear debug log
-            function clearDebug() {
-                document.getElementById('debugContainer').innerHTML = '';
-            }
-
-            // Telegram WebApp
-            const tg = window.Telegram?.WebApp;
-            if (tg) {
-                tg.expand();
-                tg.ready();
-                debugLog('Telegram WebApp initialized');
-            } else {
-                debugLog('WARNING: Telegram WebApp not available');
-            }
-
-            // DOM elements
-            const form = document.getElementById('adForm');
-            const widgetIdInput = document.getElementById('widgetId');
-            const adTypeSelect = document.getElementById('adType');
-            const rewardTypeSelect = document.getElementById('rewardType');
-            const nameInput = document.getElementById('name');
-            const descInput = document.getElementById('description');
-            const submitBtn = document.getElementById('submitBtn');
-            const adSection = document.getElementById('adSection');
-            const staticContainer = document.getElementById('staticAdContainer');
-            const fullscreenBtn = document.getElementById('fullscreenTrigger');
-            const msgContainer = document.getElementById('messageContainer');
-            const activeWidgetBadge = document.getElementById('activeWidgetBadge');
-            const widgetBtns = document.querySelectorAll('.widget-btn');
-
-            // State
-            let currentAdController = null;
-            let currentWidgetId = '9548';
-
-            function showMessage(type, text) {
-                const msgDiv = document.createElement('div');
-                msgDiv.className = type === 'success' ? 'success-message' : 'error-message';
-                msgDiv.textContent = text;
-                msgContainer.innerHTML = '';
-                msgContainer.appendChild(msgDiv);
-                setTimeout(() => msgDiv.remove(), 4000);
-            }
-
-            function resetAdDisplay() {
-                adSection.classList.add('hidden');
-                staticContainer.innerHTML = '';
-                fullscreenBtn.classList.add('hidden');
-                currentAdController = null;
-            }
-
-            function setActiveWidget(widgetId) {
-                widgetBtns.forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.widget === widgetId);
-                });
-                activeWidgetBadge.textContent = `#${widgetId}`;
-            }
-
-            // Check if tads is available
-            function checkTads() {
-                debugLog('Checking tads availability...');
-                debugLog('window.tads exists:', !!window.tads);
-                if (window.tads) {
-                    debugLog('tads.init exists:', typeof window.tads.init === 'function');
-                    debugLog('tads object keys:', Object.keys(window.tads));
-                }
-                return window.tads && typeof window.tads.init === 'function';
-            }
-
-            // Wait for tads with better detection
-            function waitForTads(timeout = 10000) {
-                return new Promise((resolve, reject) => {
-                    if (checkTads()) {
-                        debugLog('tads already available');
-                        return resolve();
-                    }
-
-                    debugLog('Waiting for tads to load...');
-                    const start = Date.now();
-                    const interval = setInterval(() => {
-                        if (checkTads()) {
-                            clearInterval(interval);
-                            debugLog('tads loaded successfully');
-                            resolve();
-                        } else if (Date.now() - start > timeout) {
-                            clearInterval(interval);
-                            reject(new Error('tads widget script failed to load'));
-                        }
-                    }, 100);
-                });
-            }
-
-            // Try different ID formats
-            function tryWidgetIdFormats(baseId) {
-                // Try both formats that tads might expect
-                return [
-                    baseId,                          // 9548
-                    baseId.toString(),               // "9548"
-                    `#${baseId}`,                    // #9548
-                    baseId.replace('#', '')          // remove # if present
-                ];
-            }
-
-            async function loadAd(widgetId, adType, rewardType, widgetName = '') {
-                clearDebug();
-                debugLog('Starting ad load process...');
-                debugLog('Widget ID:', widgetId);
-                debugLog('Ad Type:', adType);
-                debugLog('Reward Type:', rewardType);
-
+    // Debug logging
+    function debugLog(...args) {
+        console.log('[DEBUG]', ...args);
+        const debugDiv = document.getElementById('debugContainer');
+        if (debugDiv) {
+            debugDiv.classList.remove('hidden');
+            const timestamp = new Date().toLocaleTimeString();
+            // Convert args to strings safely
+            const strings = args.map(arg => {
                 try {
-                    // Wait for tads
-                    await waitForTads();
-                    
-                    // Double check tads is ready
-                    if (!window.tads || typeof window.tads.init !== 'function') {
-                        throw new Error('tads.init is not a function');
-                    }
+                    if (arg === null) return 'null';
+                    if (arg === undefined) return 'undefined';
+                    if (typeof arg === 'object') return JSON.stringify(arg);
+                    return String(arg);
+                } catch (e) {
+                    return '[unstringifiable]';
+                }
+            });
+            debugDiv.innerHTML += `[${timestamp}] ${strings.join(' ')}\n`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+    }
 
-                    resetAdDisplay();
-                    currentWidgetId = widgetId;
-                    setActiveWidget(widgetId);
+    function clearDebug() {
+        const debugDiv = document.getElementById('debugContainer');
+        if (debugDiv) debugDiv.innerHTML = '';
+    }
 
-                    // Try different ID formats
-                    const idFormats = tryWidgetIdFormats(widgetId);
-                    debugLog('Trying ID formats:', idFormats);
+    // Telegram WebApp
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.expand();
+        tg.ready();
+        debugLog('Telegram WebApp initialized');
+    }
 
-                    // Callbacks
-                    const onAdsNotFound = () => {
-                        debugLog('Callback: No ads found');
-                        showMessage('error', 'No ads available for this Widget ID');
+    // DOM elements
+    const form = document.getElementById('adForm');
+    const widgetIdInput = document.getElementById('widgetId');
+    const adTypeSelect = document.getElementById('adType');
+    const rewardTypeSelect = document.getElementById('rewardType');
+    const nameInput = document.getElementById('name');
+    const descInput = document.getElementById('description');
+    const submitBtn = document.getElementById('submitBtn');
+    const adSection = document.getElementById('adSection');
+    const staticContainer = document.getElementById('staticAdContainer');
+    const fullscreenBtn = document.getElementById('fullscreenTrigger');
+    const msgContainer = document.getElementById('messageContainer');
+    const activeWidgetBadge = document.getElementById('activeWidgetBadge');
+    const widgetBtns = document.querySelectorAll('.widget-btn');
+
+    let currentAdController = null;
+    let currentWidgetId = '9548';
+
+    function showMessage(type, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = type === 'success' ? 'success-message' : 'error-message';
+        msgDiv.textContent = text;
+        msgContainer.innerHTML = '';
+        msgContainer.appendChild(msgDiv);
+        setTimeout(() => msgDiv.remove(), 4000);
+    }
+
+    function resetAdDisplay() {
+        adSection.classList.add('hidden');
+        staticContainer.innerHTML = '';
+        fullscreenBtn.classList.add('hidden');
+        currentAdController = null;
+    }
+
+    function setActiveWidget(widgetId) {
+        widgetBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.widget === widgetId);
+        });
+        if (activeWidgetBadge) activeWidgetBadge.textContent = `#${widgetId}`;
+    }
+
+    function checkTads() {
+        debugLog('window.tads exists:', !!window.tads);
+        if (window.tads) {
+            debugLog('tads.init exists:', typeof window.tads.init === 'function');
+            debugLog('tads object keys:', Object.keys(window.tads));
+        }
+        return window.tads && typeof window.tads.init === 'function';
+    }
+
+    function waitForTads(timeout = 10000) {
+        return new Promise((resolve, reject) => {
+            if (checkTads()) {
+                debugLog('tads already available');
+                return resolve();
+            }
+            debugLog('Waiting for tads to load...');
+            const start = Date.now();
+            const interval = setInterval(() => {
+                if (checkTads()) {
+                    clearInterval(interval);
+                    debugLog('tads loaded successfully');
+                    resolve();
+                } else if (Date.now() - start > timeout) {
+                    clearInterval(interval);
+                    reject(new Error('tads widget script failed to load'));
+                }
+            }, 100);
+        });
+    }
+
+    function normalizeWidgetId(id) {
+        return id.replace(/^#/, '');
+    }
+
+    async function loadAd(widgetId, adType, rewardType, widgetName = '') {
+        clearDebug();
+        debugLog('Starting ad load process...');
+        debugLog('Widget ID:', widgetId);
+        debugLog('Ad Type:', adType);
+        debugLog('Reward Type:', rewardType);
+
+        try {
+            await waitForTads();
+
+            const normalizedId = normalizeWidgetId(widgetId);
+            debugLog('Normalized widget ID:', normalizedId);
+
+            resetAdDisplay();
+            currentWidgetId = normalizedId;
+            setActiveWidget(normalizedId);
+
+            const onAdsNotFound = () => {
+                debugLog('Callback: No ads found');
+                showMessage('error', 'No ads available for this Widget ID');
+            };
+
+            let onClickReward = null;
+            let onShowReward = null;
+
+            if (rewardType === 'rewarded') {
+                if (adType === 'static') {
+                    onClickReward = (adId) => {
+                        debugLog('Callback: Click reward - Ad ID:', adId);
+                        showMessage('success', `🎉 Click reward for #${normalizedId}`);
                     };
-
-                    let onClickReward = null;
-                    let onShowReward = null;
-
-                    if (rewardType === 'rewarded') {
-                        if (adType === 'static') {
-                            onClickReward = (adId) => {
-                                debugLog('Callback: Click reward - Ad ID:', adId);
-                                showMessage('success', `🎉 Click reward for #${widgetId}`);
-                            };
-                        } else {
-                            onShowReward = (result) => {
-                                debugLog('Callback: Show reward - Result:', result);
-                                showMessage('success', `🎁 View reward for #${widgetId}`);
-                            };
-                        }
-                    }
-
-                    // Try initializing with first format
-                    debugLog('Initializing tads with widget ID:', idFormats[0]);
-                    
-                    currentAdController = window.tads.init({
-                        widgetId: idFormats[0],
-                        type: adType,
-                        debug: false,
-                        onClickReward: onClickReward,
-                        onShowReward: onShowReward,
-                        onAdsNotFound: onAdsNotFound
-                    });
-
-                    debugLog('Ad controller created:', !!currentAdController);
-
-                    if (adType === 'static') {
-                        // Create container
-                        const containerId = `tads-container-${idFormats[0]}`;
-                        debugLog('Creating container with ID:', containerId);
-                        
-                        staticContainer.innerHTML = `<div id="${containerId}" style="min-height:100px;"></div>`;
-                        
-                        // Verify container exists
-                        const container = document.getElementById(containerId);
-                        debugLog('Container found:', !!container);
-
-                        // Load ad
-                        debugLog('Calling loadAd()...');
-                        await currentAdController.loadAd();
-                        debugLog('loadAd() completed');
-
-                        // Show ad
-                        debugLog('Calling showAd()...');
-                        await currentAdController.showAd();
-                        debugLog('showAd() completed');
-
-                        adSection.classList.remove('hidden');
-                        showMessage('success', `✅ Ad loaded for #${widgetId}`);
-                    }
-
-                } catch (error) {
-            debugLog('ERROR:', error.message);
-                    debugLog('Error stack:', error.stack);
-                    showMessage('error', `Failed: ${error.message}`);
-                    resetAdDisplay();
+                } else {
+                    onShowReward = (result) => {
+                        debugLog('Callback: Show reward - Result:', result);
+                        showMessage('success', `🎁 View reward for #${normalizedId}`);
+                    };
                 }
             }
 
-            // Quick select buttons
-            widgetBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const widgetId = btn.dataset.widget;
-                    const widgetName = btn.dataset.name;
-                    
-                    widgetIdInput.value = widgetId;
-                    nameInput.value = widgetName || '';
-                    adTypeSelect.value = 'static'; // Both your widgets are TGB
-                    setActiveWidget(widgetId);
-                    showMessage('success', `Selected #${widgetId} (${widgetName})`);
+            debugLog('Initializing tads with widget ID:', normalizedId);
+            currentAdController = window.tads.init({
+                widgetId: normalizedId,
+                type: adType,
+                debug: true,
+                onClickReward: onClickReward,
+                onShowReward: onShowReward,
+                onAdsNotFound: onAdsNotFound
+            });
+
+            debugLog('Ad controller created:', !!currentAdController);
+
+            if (adType === 'static') {
+                const containerId = `tads-container-${normalizedId}`;
+                debugLog('Creating container with ID:', containerId);
+
+                staticContainer.innerHTML = `<div id="${containerId}" style="min-height:100px; border:1px dashed #ccc;"></div>`;
+
+                const container = document.getElementById(containerId);
+                debugLog('Container found:', !!container);
+
+                debugLog('Calling loadAd()...');
+                await currentAdController.loadAd();
+                debugLog('loadAd() completed');
+
+                // Small delay to ensure DOM is ready
+                await new Promise(r => setTimeout(r, 100));
+
+                debugLog('Calling showAd()...');
+                // Use .catch() directly to capture the error before re-throwing
+                const showPromise = currentAdController.showAd();
+                showPromise.catch(err => {
+                    debugLog('>>> showAd() CATCHED INSIDE .catch():');
+                    debugLog('Error value:', err);
+                    debugLog('Type:', typeof err);
+                    if (err instanceof Error) {
+                        debugLog('Message:', err.message);
+                        debugLog('Stack:', err.stack);
+                    }
                 });
-            });
+                await showPromise; // this will re-throw the same error, caught by outer catch
+                debugLog('showAd() completed successfully');
 
-            // Form submit
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
+                adSection.classList.remove('hidden');
+                showMessage('success', `✅ Ad loaded for #${normalizedId}`);
+            } else {
+                // Fullscreen logic
+                fullscreenBtn.classList.remove('hidden');
+                adSection.classList.remove('hidden');
 
-                const widgetId = widgetIdInput.value.trim();
-                const adType = adTypeSelect.value;
-                const rewardType = rewardTypeSelect.value;
-                const name = nameInput.value.trim();
-                const desc = descInput.value.trim();
+                const newBtn = fullscreenBtn.cloneNode(true);
+                fullscreenBtn.parentNode.replaceChild(newBtn, fullscreenBtn);
+                const updatedBtn = document.getElementById('fullscreenTrigger');
+                updatedBtn.addEventListener('click', async () => {
+                    if (currentAdController) {
+                        try {
+                            await currentAdController.showAd();
+                        } catch (err) {
+                            debugLog('Fullscreen showAd error:', err);
+                            onAdsNotFound();
+                        }
+                    }
+                });
+                showMessage('success', `✅ Fullscreen ready for #${normalizedId}`);
+            }
 
-                if (!widgetId) {
-                    showMessage('error', 'Enter a Widget ID');
-                    return;
+        } catch (error) {
+            debugLog('>>> OUTER CATCH:');
+            if (error instanceof Error) {
+                debugLog('message:', error.message);
+                debugLog('stack:', error.stack);
+            } else {
+                debugLog('Caught non-Error:', error);
+                debugLog('Type:', typeof error);
+                // Attempt to stringify
+                try {
+                    debugLog('Stringified:', JSON.stringify(error));
+                } catch (e) {
+                    debugLog('Stringification failed');
                 }
+            }
+            showMessage('error', `Failed: ${error?.message || 'Unknown error'}`);
+            resetAdDisplay();
+        }
+    }
 
-                submitBtn.disabled = true;
-                submitBtn.textContent = '⏳ Loading...';
+    // Quick select buttons
+    widgetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const widgetId = btn.dataset.widget;
+            const widgetName = btn.dataset.name;
+            widgetIdInput.value = widgetId;
+            nameInput.value = widgetName || '';
+            adTypeSelect.value = 'static';
+            setActiveWidget(widgetId);
+            showMessage('success', `Selected #${widgetId} (${widgetName})`);
+        });
+    });
 
-                await loadAd(widgetId, adType, rewardType, name);
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-                submitBtn.disabled = false;
-                submitBtn.textContent = '🚀 Load Ad';
-            });
+        const widgetId = widgetIdInput.value.trim();
+        const adType = adTypeSelect.value;
+        const rewardType = rewardTypeSelect.value;
+        const name = nameInput.value.trim();
+        const desc = descInput.value.trim();
 
-            // Set default
-            setActiveWidget('9548');
-            
-            // Check tads availability on load
-            window.addEventListener('load', () => {
-                debugLog('Page loaded');
-                checkTads();
-            });
+        if (!widgetId) {
+            showMessage('error', 'Enter a Widget ID');
+            return;
+        }
 
-        })();
-    </script>
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Loading...';
+
+        await loadAd(widgetId, adType, rewardType, name);
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🚀 Load Ad';
+    });
+
+    setActiveWidget('9548');
+    window.addEventListener('load', () => {
+        debugLog('Page loaded');
+        checkTads();
+    });
+})();
+</script>
 </body>
 </html>
+
 
