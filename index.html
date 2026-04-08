@@ -1,727 +1,297 @@
-<!DOCTYPE html>
+   <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>tads Publisher TMA Tester • Full‑screen Ad Environment</title>
-    <!-- Telegram Mini App initialization -->
+    <title>tads – Full Environment Ad (with Continue button)</title>
     <script src="https://telegram.org/js/telegram-web-app.js?61"></script>
-    <!-- tads widget script (loaded globally) -->
     <script src="https://w.tads.me/widget.js"></script>
     <style>
-        /* ----------------------------
-           GLOBAL THEME VARIABLES
-        ---------------------------- */
-        * {
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding: 16px;
             margin: 0;
-            background: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            transition: all 0.2s;
+            padding: 16px;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
         }
-
-        /* when fullscreen overlay is active → prevent body scroll */
-        body.ad-overlay-open {
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-        }
-
-        h1 { font-size: 24px; margin-bottom: 8px; }
-        .subtitle { font-size: 14px; color: var(--tg-theme-hint-color, #999999); margin-bottom: 24px; }
-
-        .info-box {
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-left: 4px solid var(--tg-theme-button-color, #40a7e3);
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-
-        .quick-select {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .widget-btn {
-            flex: 1;
-            min-width: 120px;
-            padding: 12px;
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border: 2px solid var(--tg-theme-button-color, #40a7e3);
-            border-radius: 8px;
-            color: var(--tg-theme-text-color, #000000);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .widget-btn:hover, .widget-btn.active {
-            background: var(--tg-theme-button-color, #40a7e3);
-            color: var(--tg-theme-button-text-color, #ffffff);
-        }
-
-        .form-group { margin-bottom: 20px; }
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--tg-theme-hint-color, #666666);
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--tg-theme-hint-color, #dddddd);
-            border-radius: 8px;
-            background: var(--tg-theme-secondary-bg-color, #f9f9f9);
-            color: var(--tg-theme-text-color, #000000);
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-
-        textarea { resize: vertical; min-height: 80px; }
-
-        button {
-            width: 100%;
-            padding: 14px 24px;
-            background: var(--tg-theme-button-color, #40a7e3);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            margin-top: 8px;
-        }
-
-        button:active { opacity: 0.8; }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        #adSection {
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid var(--tg-theme-hint-color, #eeeeee);
-        }
-
-        /* hidden legacy container — now we use fullscreen overlay for static ads */
-        #staticAdContainer {
-            display: none;
-        }
-
-        #fullscreenTrigger {
-            margin-top: 16px;
-        }
-
-        .hidden { display: none; }
-
-        .success-message {
-            background: #4caf50;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .error-message {
-            background: #f44336;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .info-message {
-            background: #2196f3;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .debug-box {
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            margin-top: 20px;
-            white-space: pre-wrap;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        /* ========== FULLSCREEN OVERLAY for STATIC ADS ========== */
-        .tads-fullscreen-overlay {
+        .fullscreen-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: var(--tg-theme-bg-color, #000000);
+            background: #000;
             z-index: 10000;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
-            backdrop-filter: blur(0px);
-            animation: fadeInOverlay 0.25s ease;
         }
-
-        /* inner wrapper for the ad widget itself */
-        .tads-overlay-inner {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        /* ad container inside overlay: takes full space */
-        .tads-fullscreen-container {
+        .ad-container {
             width: 100%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
         }
-
-        /* close button (X) for fullscreen overlay */
-        .overlay-close-btn {
-            position: absolute;
+        /* Continue button – exactly like your screenshot */
+        .continue-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 20px;
+            right: 20px;
+            background: #40a7e3;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            z-index: 10010;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .continue-btn:active { opacity: 0.8; }
+        .close-icon {
+            position: fixed;
             top: 20px;
             right: 20px;
             width: 44px;
             height: 44px;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(8px);
+            background: rgba(0,0,0,0.5);
             border-radius: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 28px;
+            color: white;
             cursor: pointer;
             z-index: 10010;
-            border: none;
-            font-size: 28px;
-            font-weight: 300;
-            color: white;
-            transition: all 0.2s;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
-
-        .overlay-close-btn:hover {
-            background: rgba(0,0,0,0.85);
-            transform: scale(1.02);
-        }
-
-        @keyframes fadeInOverlay {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        /* rest of UI styles */
+        .widget-btn { display: inline-block; padding: 10px; margin: 5px; background: #eee; border-radius: 8px; cursor: pointer; }
+        .active { background: #40a7e3; color: white; }
+        .hidden { display: none; }
+        .success-message, .error-message, .info-message { padding: 12px; border-radius: 8px; margin: 10px 0; text-align: center; }
+        .success-message { background: #4caf50; color: white; }
+        .error-message { background: #f44336; color: white; }
+        .info-message { background: #2196f3; color: white; }
+        button { background: #40a7e3; color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-size: 16px; margin-top: 8px; }
+        input, select, textarea { width: 100%; padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
-    <h1>🧪 Test Your tads Widget</h1>
-    <div class="subtitle">Widgets from dashboard: #9548 (Abr) | #9549 (ar) — FULL ENVIRONMENT ADS</div>
-
-    <!-- Debug panel -->
-    <div id="debugContainer" class="debug-box hidden"></div>
+    <h1>📱 tads – Full Environment Ad</h1>
+    <div class="subtitle">Ad covers entire Telegram screen + "Continue" button</div>
 
     <div class="quick-select">
-        <div class="widget-btn" data-widget="9548" data-name="Abr">📋 #9548 (Abr)</div>
-        <div class="widget-btn" data-widget="9549" data-name="ar">📋 #9549 (ar)</div>
+        <div class="widget-btn" data-widget="9548">#9548 (Abr)</div>
+        <div class="widget-btn" data-widget="9549">#9549 (ar)</div>
     </div>
 
     <form id="adForm">
-        <div class="form-group">
-            <label for="widgetId">Widget ID *</label>
-            <input type="text" id="widgetId" name="widgetId" required value="9548">
-        </div>
-
-        <div class="form-group">
-            <label for="adType">Ad Format</label>
-            <select id="adType" name="adType">
-                <option value="static" selected>📱 FULL ENVIRONMENT (Full-screen overlay)</option>
-                <option value="fullscreen">🖥️ Native Fullscreen Banner (tads fullscreen)</option>
-            </select>
-            <div class="info-box" style="margin-top: 8px; font-size:13px;">
-                ⚡ "Full Environment" mode shows the ad covering the ENTIRE Telegram Mini App screen. No more little box!
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="rewardType">Reward Type</label>
-            <select id="rewardType" name="rewardType">
-                <option value="rewarded">🎁 Rewarded</option>
-                <option value="non-rewarded">🔹 Non-rewarded</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" value="Abr">
-        </div>
-
-        <div class="form-group">
-            <label for="description">Description</label>
-            <textarea id="description" name="description">Test widget from dashboard</textarea>
-        </div>
-
-        <button type="submit" id="submitBtn">🚀 Load Ad (Full Environment)</button>
+        <label>Widget ID</label>
+        <input type="text" id="widgetId" value="9548">
+        <label>Ad Format</label>
+        <select id="adType">
+            <option value="fullscreen" selected>🎯 FULLSCREEN (with Continue button)</option>
+            <option value="static">📦 Static (also fullscreen overlay + Continue)</option>
+        </select>
+        <label>Reward Type</label>
+        <select id="rewardType">
+            <option value="rewarded">🎁 Rewarded</option>
+            <option value="non-rewarded">🔹 Non-rewarded</option>
+        </select>
+        <button type="submit">🚀 Show Fullscreen Ad (like screenshot)</button>
     </form>
-
-    <div id="adSection" class="hidden">
-        <h2>Ad Preview <span id="activeWidgetBadge" style="background:var(--tg-theme-button-color); color:white; padding:2px 8px; border-radius:4px;">#9548</span></h2>
-        <div id="staticAdContainer"></div>
-        <button id="fullscreenTrigger" class="hidden">Show Fullscreen Ad</button>
-    </div>
 
     <div id="messageContainer"></div>
 
     <script>
-    (function() {
-        // ---------- GLOBALS ----------
-        let currentAdController = null;
-        let currentWidgetId = '9548';
-        let noAdsHandled = false;
-        let activeOverlayElement = null;     // reference to fullscreen overlay div (static mode)
-        
         const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.expand();      // make Mini App full height
-            tg.ready();
-            console.log('[Telegram] WebApp expanded & ready');
-        }
+        if (tg) { tg.expand(); tg.ready(); }
 
-        // Helper: debug log
-        function debugLog(...args) {
-            console.log('[DEBUG]', ...args);
-            const debugDiv = document.getElementById('debugContainer');
-            if (debugDiv) {
-                debugDiv.classList.remove('hidden');
-                const timestamp = new Date().toLocaleTimeString();
-                const strings = args.map(arg => {
-                    try {
-                        if (arg === null) return 'null';
-                        if (arg === undefined) return 'undefined';
-                        if (typeof arg === 'object') return JSON.stringify(arg);
-                        return String(arg);
-                    } catch (e) { return '[unstringifiable]'; }
-                });
-                debugDiv.innerHTML += `[${timestamp}] ${strings.join(' ')}\n`;
-                debugDiv.scrollTop = debugDiv.scrollHeight;
-            }
-        }
-
-        function clearDebug() {
-            const debugDiv = document.getElementById('debugContainer');
-            if (debugDiv) debugDiv.innerHTML = '';
-        }
-
-        // remove any active fullscreen overlay (static mode)
-        function removeFullscreenOverlay() {
-            if (activeOverlayElement && activeOverlayElement.parentNode) {
-                activeOverlayElement.remove();
-                activeOverlayElement = null;
-                debugLog('Fullscreen overlay removed');
-            }
-            document.body.classList.remove('ad-overlay-open');
-            // re-enable scroll
-            document.body.style.position = '';
-            document.body.style.width = '';
-            document.body.style.height = '';
-        }
-
-        // reset ad display (clean controllers + overlay)
-        function resetAdDisplay() {
-            debugLog('Resetting ad display & removing any overlay...');
-            if (currentAdController) {
-                // attempt to clean if possible (tads might not have destroy, but we discard reference)
-                try {
-                    if (typeof currentAdController.destroy === 'function') currentAdController.destroy();
-                } catch(e) { /* ignore */ }
-                currentAdController = null;
-            }
-            removeFullscreenOverlay();
-            // hide legacy ad section but don't rely on it
-            const adSection = document.getElementById('adSection');
-            if (adSection) adSection.classList.add('hidden');
-            const staticContainer = document.getElementById('staticAdContainer');
-            if (staticContainer) staticContainer.innerHTML = '';
-            const fullscreenBtn = document.getElementById('fullscreenTrigger');
-            if (fullscreenBtn) fullscreenBtn.classList.add('hidden');
-            noAdsHandled = false;
-        }
+        let currentController = null;
+        let activeOverlay = null;
 
         function showMessage(type, text) {
-            const msgContainer = document.getElementById('messageContainer');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = type === 'success' ? 'success-message' : (type === 'info' ? 'info-message' : 'error-message');
-            msgDiv.textContent = text;
-            msgContainer.innerHTML = '';
-            msgContainer.appendChild(msgDiv);
-            setTimeout(() => msgDiv.remove(), 4500);
+            const div = document.createElement('div');
+            div.className = type + '-message';
+            div.innerText = text;
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = '';
+            container.appendChild(div);
+            setTimeout(() => div.remove(), 4000);
         }
 
-        function setActiveWidget(widgetId) {
-            const widgetBtns = document.querySelectorAll('.widget-btn');
-            widgetBtns.forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.widget === widgetId);
-            });
-            const badge = document.getElementById('activeWidgetBadge');
-            if (badge) badge.textContent = `#${widgetId}`;
+        function removeOverlay() {
+            if (activeOverlay) {
+                activeOverlay.remove();
+                activeOverlay = null;
+            }
+            document.body.style.overflow = '';
         }
 
-        function checkTads() {
-            return window.tads && typeof window.tads.init === 'function';
-        }
+        async function showFullscreenAd(widgetId, rewardType, useNativeFullscreen = true) {
+            removeOverlay();
+            if (currentController) currentController = null;
 
-        function waitForTads(timeout = 10000) {
-            return new Promise((resolve, reject) => {
-                if (checkTads()) {
-                    debugLog('tads already available');
-                    return resolve();
-                }
-                debugLog('Waiting for tads widget script...');
-                const start = Date.now();
-                const interval = setInterval(() => {
-                    if (checkTads()) {
-                        clearInterval(interval);
-                        debugLog('tads loaded successfully');
-                        resolve();
-                    } else if (Date.now() - start > timeout) {
-                        clearInterval(interval);
-                        reject(new Error('tads widget script timeout'));
-                    }
-                }, 100);
-            });
-        }
-
-        function normalizeWidgetId(id) {
-            return id.replace(/^#/, '');
-        }
-
-        // ---------- FULL ENVIRONMENT (STATIC MODE) FULLSCREEN OVERLAY ----------
-        async function loadFullEnvironmentAd(widgetId, rewardType, widgetName = '') {
-            debugLog('>>> Loading FULL ENVIRONMENT AD (fullscreen overlay)');
-            const normalizedId = normalizeWidgetId(widgetId);
-            
-            // 1. reset any existing overlay & controller
-            resetAdDisplay();
-            currentWidgetId = normalizedId;
-            setActiveWidget(normalizedId);
-            
-            // 2. create fullscreen overlay DOM
-            const overlay = document.createElement('div');
-            overlay.className = 'tads-fullscreen-overlay';
-            overlay.id = `tads-overlay-${normalizedId}`;
-            
-            const innerWrapper = document.createElement('div');
-            innerWrapper.className = 'tads-overlay-inner';
-            
-            const adContainerDiv = document.createElement('div');
-            adContainerDiv.className = 'tads-fullscreen-container';
-            const uniqueContainerId = `tads-env-container-${normalizedId}-${Date.now()}`;
-            adContainerDiv.id = uniqueContainerId;
-            
-            innerWrapper.appendChild(adContainerDiv);
-            
-            // close button (X) to dismiss overlay manually
-            const closeBtn = document.createElement('button');
-            closeBtn.innerHTML = '✕';
-            closeBtn.className = 'overlay-close-btn';
-            closeBtn.setAttribute('aria-label', 'Close ad');
-            closeBtn.onclick = () => {
-                debugLog('User closed fullscreen overlay manually');
-                if (currentAdController) {
-                    // optional: if rewarded ad not finished, we just close and revoke reward? fine.
-                    try {
-                        if (typeof currentAdController.destroy === 'function') currentAdController.destroy();
-                    } catch(e) {}
-                    currentAdController = null;
-                }
-                removeFullscreenOverlay();
-                showMessage('info', 'Ad overlay closed');
-                // re-enable any controls
-                document.getElementById('submitBtn').disabled = false;
-            };
-            
-            overlay.appendChild(innerWrapper);
-            overlay.appendChild(closeBtn);
-            document.body.appendChild(overlay);
-            activeOverlayElement = overlay;
-            document.body.classList.add('ad-overlay-open');
-            
-            // ensure Telegram expands again (sometimes needed)
-            if (tg && typeof tg.expand === 'function') tg.expand();
-            
-            // 3. setup callbacks for tads
-            const onAdsNotFound = () => {
-                debugLog('Callback: No ads found for this widget (full environment)');
-                noAdsHandled = true;
-                showMessage('info', 'ℹ️ No ads available for this Widget ID right now.');
-                // remove overlay because there's no ad
-                removeFullscreenOverlay();
-                if (currentAdController) currentAdController = null;
-            };
-            
-            let onClickReward = null;
-            let onShowReward = null;
-            
-            if (rewardType === 'rewarded') {
-                onClickReward = (adId) => {
-                    debugLog('Reward callback (click): Ad ID', adId);
-                    showMessage('success', `🎉 Click reward granted for #${normalizedId}!`);
-                };
-                onShowReward = (result) => {
-                    debugLog('Reward callback (view):', result);
-                    showMessage('success', `🎁 View reward granted for #${normalizedId}`);
-                };
-            }
-            
-            // 4. initialize tads controller with static type (TGB) but placed inside fullscreen overlay
-            debugLog('Initializing tads (static mode) for full environment...');
-            let adController;
-            try {
-                adController = window.tads.init({
-                    widgetId: normalizedId,
-                    type: 'static',
-                    debug: false,
-                    onClickReward: onClickReward,
-                    onShowReward: onShowReward,
-                    onAdsNotFound: onAdsNotFound
-                });
-                currentAdController = adController;
-                debugLog('Controller created, calling loadAd()');
-                await adController.loadAd();
-                debugLog('loadAd() finished, now showAd()');
-                await adController.showAd();
-                debugLog('showAd() success — ad is now displayed inside fullscreen overlay');
-                
-                // inject the widget content into our fullscreen container
-                // the tads widget automatically renders inside the container that we previously created? Not exactly.
-                // The tads.init with static type expects a container element to be present in the DOM with an ID.
-                // According to original logic, it searches for container with id "tads-container-{widgetId}". But we want full control.
-                // Actually the tads widget creates its own container? From documentation typical usage: it appends to a container.
-                // In the original code, they inserted <div id="tads-container-{id}"> into staticContainer, then tads renders inside that.
-                // To guarantee rendering inside our custom fullscreen container, we need to provide a container element to tads.
-                // However tads.init does not accept container param directly? Let's inspect: typical widget creates its own iframe or div inside document.body or predefined container.
-                // To be safe: we manually create a container inside our overlay, and then we call a method to attach? But widget should look for container with id `tads-container-${widgetId}`.
-                // Let's dynamically create that container inside our overlay and let tads render there.
-                // The static widget uses the container ID: `tads-container-${normalizedId}`. We'll create that element inside our overlay.
-                const expectedContainerId = `tads-container-${normalizedId}`;
-                let existingContainer = document.getElementById(expectedContainerId);
-                if (!existingContainer) {
-                    const newContainer = document.createElement('div');
-                    newContainer.id = expectedContainerId;
-                    newContainer.style.width = '100%';
-                    newContainer.style.height = '100%';
-                    newContainer.style.display = 'flex';
-                    newContainer.style.justifyContent = 'center';
-                    newContainer.style.alignItems = 'center';
-                    // replace inner content of adContainerDiv with this container
-                    adContainerDiv.innerHTML = '';
-                    adContainerDiv.appendChild(newContainer);
-                    debugLog(`Created container #${expectedContainerId} inside overlay for tads rendering`);
-                } else {
-                    // move existing container inside overlay
-                    adContainerDiv.innerHTML = '';
-                    adContainerDiv.appendChild(existingContainer);
-                    debugLog('Moved existing container inside overlay');
-                }
-                
-                // After container is ready, the widget should already be rendered if showAd() was called.
-                // But sometimes tads needs reflow, we force a small delay to ensure UI appears.
-                await new Promise(r => setTimeout(r, 80));
-                debugLog('Full environment ad is now covering entire Telegram view');
-                showMessage('success', `✅ FULL SCREEN AD loaded for #${normalizedId} — covers whole environment!`);
-            } catch (err) {
-                debugLog('ERROR during full environment ad flow:', err);
-                if (!noAdsHandled) {
-                    const errorMsg = err?.message || String(err);
-                    showMessage('error', `Ad error: ${errorMsg}`);
-                }
-                removeFullscreenOverlay();
-                currentAdController = null;
-                throw err;
-            }
-        }
-        
-        // ---------- NATIVE FULLSCREEN (tads fullscreen type) ----------
-        async function loadNativeFullscreenAd(widgetId, rewardType, widgetName = '') {
-            debugLog('>>> Loading NATIVE FULLSCREEN (tads fullscreen)');
-            const normalizedId = normalizeWidgetId(widgetId);
-            resetAdDisplay();  // remove any overlay, etc
-            currentWidgetId = normalizedId;
-            setActiveWidget(normalizedId);
-            
-            const onAdsNotFound = () => {
-                debugLog('Callback: No ads found (native fullscreen)');
-                noAdsHandled = true;
-                showMessage('info', 'ℹ️ No ads available for fullscreen format.');
-                const adSection = document.getElementById('adSection');
-                if (adSection) adSection.classList.add('hidden');
-            };
-            
-            let onShowReward = null;
-            if (rewardType === 'rewarded') {
-                onShowReward = (result) => {
-                    debugLog('Fullscreen reward callback:', result);
-                    showMessage('success', `🎁 Fullscreen reward granted for #${normalizedId}`);
-                };
-            }
-            
-            try {
-                const adController = window.tads.init({
-                    widgetId: normalizedId,
-                    type: 'fullscreen',
-                    debug: false,
-                    onShowReward: onShowReward,
-                    onAdsNotFound: onAdsNotFound
-                });
-                currentAdController = adController;
-                
-                // show UI elements: ad section + trigger button
-                const adSection = document.getElementById('adSection');
-                const fullscreenBtn = document.getElementById('fullscreenTrigger');
-                if (adSection) adSection.classList.remove('hidden');
-                if (fullscreenBtn) {
-                    fullscreenBtn.classList.remove('hidden');
-                    // replace button to avoid duplicate listeners
-                    const newBtn = fullscreenBtn.cloneNode(true);
-                    fullscreenBtn.parentNode.replaceChild(newBtn, fullscreenBtn);
-                    const updatedBtn = document.getElementById('fullscreenTrigger');
-                    updatedBtn.addEventListener('click', async () => {
-                        if (currentAdController) {
-                            try {
-                                await currentAdController.showAd();
-                                debugLog('Native fullscreen ad triggered');
-                            } catch (err) {
-                                debugLog('Fullscreen showAd error:', err);
-                                if (!noAdsHandled) onAdsNotFound();
-                            }
-                        }
-                    });
-                }
-                showMessage('success', `✅ Native fullscreen ready for #${normalizedId}. Click button to show full ad.`);
-            } catch (err) {
-                debugLog('Native fullscreen init error:', err);
-                if (!noAdsHandled) showMessage('error', `Fullscreen init failed: ${err?.message || err}`);
-                resetAdDisplay();
-            }
-        }
-        
-        // main entry: decide based on adType
-        async function loadAd(widgetId, adType, rewardType, widgetName = '') {
-            clearDebug();
-            debugLog(`🚀 loadAd called: widget=${widgetId}, type=${adType}, reward=${rewardType}`);
-            try {
-                await waitForTads();
-                if (adType === 'static') {
-                    // FULL ENVIRONMENT MODE: fullscreen overlay that covers everything
-                    await loadFullEnvironmentAd(widgetId, rewardType, widgetName);
-                } else if (adType === 'fullscreen') {
-                    await loadNativeFullscreenAd(widgetId, rewardType, widgetName);
-                } else {
-                    throw new Error('Unknown ad type');
-                }
-            } catch (err) {
-                debugLog('CRITICAL loadAd error:', err);
-                if (!noAdsHandled) {
-                    showMessage('error', `Ad error: ${err?.message || 'unknown'}`);
-                }
-                resetAdDisplay();
-            }
-        }
-        
-        // ---------- UI EVENT BINDINGS ----------
-        const form = document.getElementById('adForm');
-        const widgetIdInput = document.getElementById('widgetId');
-        const adTypeSelect = document.getElementById('adType');
-        const rewardTypeSelect = document.getElementById('rewardType');
-        const nameInput = document.getElementById('name');
-        const submitBtn = document.getElementById('submitBtn');
-        const widgetBtns = document.querySelectorAll('.widget-btn');
-        
-        // quick select widgets
-        widgetBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const widgetId = btn.dataset.widget;
-                const widgetName = btn.dataset.name;
-                widgetIdInput.value = widgetId;
-                nameInput.value = widgetName || '';
-                adTypeSelect.value = 'static';   // default to full environment
-                setActiveWidget(widgetId);
-                showMessage('success', `Selected #${widgetId} (${widgetName}) — Full Environment ready`);
-            });
-        });
-        
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const widgetId = widgetIdInput.value.trim();
-            const adType = adTypeSelect.value;
-            const rewardType = rewardTypeSelect.value;
-            const name = nameInput.value.trim();
-            
-            if (!widgetId) {
-                showMessage('error', 'Please enter a Widget ID');
+            if (!window.tads || typeof window.tads.init !== 'function') {
+                showMessage('error', 'tads widget not loaded. Check internet.');
                 return;
             }
+
+            const normalizedId = widgetId.replace(/^#/, '');
             
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Loading full environment ad...';
+            // Create fullscreen overlay with Continue button
+            const overlay = document.createElement('div');
+            overlay.className = 'fullscreen-overlay';
+            const adContainer = document.createElement('div');
+            adContainer.className = 'ad-container';
+            adContainer.id = `tads-live-${normalizedId}`;
+            overlay.appendChild(adContainer);
             
+            // Continue button (exactly like screenshot)
+            const continueBtn = document.createElement('button');
+            continueBtn.innerText = 'Continue';
+            continueBtn.className = 'continue-btn';
+            // Close X (optional but safe)
+            const closeX = document.createElement('div');
+            closeX.innerHTML = '✕';
+            closeX.className = 'close-icon';
+            closeX.onclick = () => {
+                if (currentController && rewardType === 'rewarded') {
+                    showMessage('info', 'Ad closed early – reward may not be given');
+                }
+                removeOverlay();
+            };
+            
+            overlay.appendChild(continueBtn);
+            overlay.appendChild(closeX);
+            document.body.appendChild(overlay);
+            activeOverlay = overlay;
+            document.body.style.overflow = 'hidden';
+            if (tg && tg.expand) tg.expand();
+
+            // Handle continue click – close ad & give reward if needed
+            let rewardGiven = false;
+            continueBtn.onclick = async () => {
+                if (rewardType === 'rewarded' && !rewardGiven) {
+                    showMessage('success', '🎉 Reward granted!');
+                    rewardGiven = true;
+                }
+                removeOverlay();
+                if (currentController && typeof currentController.destroy === 'function') currentController.destroy();
+                currentController = null;
+            };
+
             try {
-                await loadAd(widgetId, adType, rewardType, name);
-            } catch (finalErr) {
-                debugLog('Submit handler error:', finalErr);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '🚀 Load Ad (Full Environment)';
+                // Choose ad type
+                const typeToUse = useNativeFullscreen ? 'fullscreen' : 'static';
+                const callbacks = {
+                    onAdsNotFound: () => {
+                        showMessage('info', 'No ads available right now.');
+                        removeOverlay();
+                    }
+                };
+                if (rewardType === 'rewarded') {
+                    if (typeToUse === 'fullscreen') {
+                        callbacks.onShowReward = (res) => {
+                            if (!rewardGiven) {
+                                showMessage('success', '🎁 Reward from view!');
+                                rewardGiven = true;
+                            }
+                        };
+                    } else {
+                        callbacks.onClickReward = (adId) => {
+                            if (!rewardGiven) {
+                                showMessage('success', '🎁 Reward from click!');
+                                rewardGiven = true;
+                            }
+                        };
+                    }
+                }
+
+                const controller = window.tads.init({
+                    widgetId: normalizedId,
+                    type: typeToUse,
+                    debug: false,
+                    ...callbacks
+                });
+                currentController = controller;
+
+                if (typeToUse === 'static') {
+                    // For static, we need to inject into our container
+                    const containerId = `tads-container-${normalizedId}`;
+                    let targetDiv = document.getElementById(containerId);
+                    if (!targetDiv) {
+                        targetDiv = document.createElement('div');
+                        targetDiv.id = containerId;
+                        targetDiv.style.width = '100%';
+                        targetDiv.style.height = '100%';
+                        adContainer.appendChild(targetDiv);
+                    } else {
+                        adContainer.appendChild(targetDiv);
+                    }
+                    await controller.loadAd();
+                    await controller.showAd();
+                } else {
+                    // Native fullscreen – just call showAd, tads will handle its own fullscreen UI
+                    // but we still keep our overlay to show "Continue" button on top? Actually native fullscreen already has its own button.
+                    // For consistency with screenshot, we let tads native fullscreen do its thing, but our continue button might conflict.
+                    // Better: if native fullscreen, we remove our custom continue button and let tads provide its own "Continue".
+                    if (useNativeFullscreen) {
+                        // Remove our custom continue button to avoid double UI
+                        continueBtn.remove();
+                        closeX.remove();
+                        // tads native fullscreen will show its own continue button
+                        await controller.showAd();
+                        // After ad finishes, remove overlay automatically
+                        // tads might not close overlay, so we listen for ad end? For simplicity, we'll keep overlay but user can tap X.
+                        // Actually tads fullscreen takes over the whole screen – it creates its own layer. Our overlay is redundant.
+                        // So we remove our overlay entirely and let tads handle fullscreen.
+                        removeOverlay();
+                        // Re-show? No, tads is already showing fullscreen.
+                        // But we need to keep the controller alive.
+                        // No further action.
+                    } else {
+                        await controller.showAd();
+                    }
+                }
+                if (!useNativeFullscreen) {
+                    showMessage('success', 'Ad loaded – tap "Continue" to close & claim reward');
+                }
+            } catch (err) {
+                console.error(err);
+                showMessage('error', 'Ad error: ' + (err.message || 'unknown'));
+                removeOverlay();
             }
+        }
+
+        // UI bindings
+        document.querySelectorAll('.widget-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.getElementById('widgetId').value = btn.dataset.widget;
+                document.querySelectorAll('.widget-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            };
         });
-        
-        // initial active badge
-        setActiveWidget('9548');
-        
-        // ensure Telegram expand again on any resize or load
-        window.addEventListener('load', () => {
-            if (tg && typeof tg.expand === 'function') tg.expand();
-            debugLog('Page fully loaded — ready for full environment ads');
-            checkTads();
-        });
-        
-        // handle visibility changes to keep fullscreen expand
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && tg && tg.expand) tg.expand();
-        });
-    })();
+
+        document.getElementById('adForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const widgetId = document.getElementById('widgetId').value.trim();
+            const adType = document.getElementById('adType').value;
+            const rewardType = document.getElementById('rewardType').value;
+            if (!widgetId) return showMessage('error', 'Enter Widget ID');
+            const useNative = (adType === 'fullscreen');
+            await showFullscreenAd(widgetId, rewardType, useNative);
+        };
+
+        // default active
+        document.querySelector('.widget-btn').classList.add('active');
     </script>
 </body>
-</html>
-                
+</html>                                 
